@@ -28,7 +28,12 @@ pub(crate) fn handle_pointer_controller_event(
     //std::thread::sleep(std::time::Duration::from_millis(100));
     //super::input::debug_gdk_event(event);
 
-    if reject_pointer_input(event, touch_drawing) {
+    if reject_pointer_input(
+        event,
+        state,
+        input_source == canvas.pen_input_source(),
+        touch_drawing,
+    ) {
         return (Inhibit(false), state);
     }
 
@@ -165,7 +170,12 @@ pub(crate) fn handle_pointer_controller_event(
         let pen_mode = retrieve_pen_mode(event);
 
         for (element, event_time) in elements {
-            //log::debug!("handle pen event, state: {state:?}, event_time_d: {:?}, modifier_keys: {modifier_keys:?}, pen_mode: {pen_mode:?}", now.duration_since(event_time));
+            /*log::debug!(
+                "({:.1} {:.1}) handle pen event, state: {state:?}, event_time_d: {:?}, modifier_keys: {modifier_keys:?}, pen_mode: {pen_mode:?}",
+                element.pos.x,
+                element.pos.y,
+                now.duration_since(event_time)
+            );*/
 
             match state {
                 PenState::Up => {
@@ -207,6 +217,12 @@ pub(crate) fn handle_pointer_controller_event(
                 }
             }
         }
+    }
+
+    if matches!(state, PenState::Down) {
+        canvas.set_pen_device(event.device());
+    } else {
+        canvas.set_pen_device(None);
     }
 
     canvas.emit_handle_widget_flags(widget_flags);
@@ -267,7 +283,15 @@ fn debug_gdk_event(event: &gdk::Event) {
 }
 
 /// Returns true if input should be rejected
-fn reject_pointer_input(event: &gdk::Event, touch_drawing: bool) -> bool {
+fn reject_pointer_input(
+    event: &gdk::Event,
+    state: PenState,
+    device_matches: bool,
+    touch_drawing: bool,
+) -> bool {
+    if matches!(state, PenState::Down) && !device_matches {
+        return true;
+    }
     if touch_drawing {
         if event.device().unwrap().num_touches() > 1 {
             return true;

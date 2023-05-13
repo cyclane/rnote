@@ -66,6 +66,7 @@ mod imp {
         pub(crate) key_controller_im_context: IMMulticontext,
         pub(crate) drop_target: DropTarget,
         pub(crate) drawing_cursor_enabled: Cell<bool>,
+        pub(crate) pen_input_source: Cell<Option<gdk::InputSource>>,
 
         pub(crate) engine: RefCell<RnoteEngine>,
 
@@ -157,6 +158,7 @@ mod imp {
                 key_controller_im_context,
                 drop_target,
                 drawing_cursor_enabled: Cell::new(false),
+                pen_input_source: Cell::new(None),
 
                 engine: RefCell::new(engine),
 
@@ -637,6 +639,15 @@ impl RnCanvas {
         if self.imp().show_drawing_cursor.get() != show_drawing_cursor {
             self.set_property("show-drawing-cursor", show_drawing_cursor.to_value());
         }
+    }
+
+    pub(crate) fn pen_input_source(&self) -> Option<gdk::InputSource> {
+        self.imp().pen_input_source.get()
+    }
+
+    #[allow(unused)]
+    pub(crate) fn set_pen_input_source(&self, pen_input_source: Option<gdk::InputSource>) {
+        self.imp().pen_input_source.set(pen_input_source);
     }
 
     #[allow(unused)]
