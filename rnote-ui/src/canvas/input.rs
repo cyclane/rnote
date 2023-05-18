@@ -23,7 +23,8 @@ pub(crate) fn handle_pointer_controller_event(
     let gdk_modifiers = event.modifier_state();
     let _gdk_device = event.device().unwrap();
     let backlog_policy = canvas.engine_ref().penholder.backlog_policy;
-    let is_stylus = event_is_stylus(event);
+    let input_source = input_source_from_event(event);
+    let is_stylus = input_source == Some(gdk::InputSource::Pen);
 
     //std::thread::sleep(std::time::Duration::from_millis(100));
     //super::input::debug_gdk_event(event);
@@ -220,9 +221,9 @@ pub(crate) fn handle_pointer_controller_event(
     }
 
     if matches!(state, PenState::Down) {
-        canvas.set_pen_device(event.device());
+        canvas.set_pen_input_source(input_source);
     } else {
-        canvas.set_pen_device(None);
+        canvas.set_pen_input_source(None);
     }
 
     canvas.emit_handle_widget_flags(widget_flags);
@@ -286,10 +287,10 @@ fn debug_gdk_event(event: &gdk::Event) {
 fn reject_pointer_input(
     event: &gdk::Event,
     state: PenState,
-    device_matches: bool,
+    input_source_matches: bool,
     touch_drawing: bool,
 ) -> bool {
-    if matches!(state, PenState::Down) && !device_matches {
+    if matches!(state, PenState::Down) && !input_source_matches {
         return true;
     }
     if touch_drawing {
@@ -297,13 +298,7 @@ fn reject_pointer_input(
             return true;
         }
     } else {
-        let event_type = event.event_type();
-        if event.is_pointer_emulated()
-            || event_type == gdk::EventType::TouchBegin
-            || event_type == gdk::EventType::TouchUpdate
-            || event_type == gdk::EventType::TouchEnd
-            || event_type == gdk::EventType::TouchCancel
-        {
+        if event.is_pointer_emulated() || event_is_touchscreen(event) {
             return true;
         }
     }
@@ -313,6 +308,27 @@ fn reject_pointer_input(
 fn event_is_stylus(event: &gdk::Event) -> bool {
     // As in gtk4 'gtkgesturestylus.c:106' we detect if the pointer is a stylus when it has a device tool
     event.device_tool().is_some()
+}
+
+fn event_is_touchscreen(event: &gdk::Event) -> bool {
+    matches!(
+        event.event_type(),
+        gdk::EventType::TouchBegin
+            | gdk::EventType::TouchUpdate
+            | gdk::EventType::TouchEnd
+            | gdk::EventType::TouchCancel
+    )
+}
+
+// See https://gitlab.gnome.org/GNOME/gtk/issues/4374
+fn input_source_from_event(event: &gdk::Event) -> Option<gdk::InputSource> {
+    if event_is_stylus(event) {
+        Some(gdk::InputSource::Pen)
+    } else if event_is_touchscreen(event) {
+        Some(gdk::InputSource::Touchscreen)
+    } else {
+        event.device().and_then(|d| Some(d.source()))
+    }
 }
 
 fn retrieve_pointer_elements(
