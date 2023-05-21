@@ -5,6 +5,7 @@ mod input;
 
 // Re-exports
 pub(crate) use canvaslayout::RnCanvasLayout;
+pub(crate) use input::input_source_from_event;
 
 // Imports
 use crate::{config, RnAppWindow};
