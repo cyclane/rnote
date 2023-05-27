@@ -220,12 +220,7 @@ pub(crate) fn handle_pointer_controller_event(
         }
     }
 
-    if matches!(state, PenState::Down) {
-        canvas.set_pen_input_source(input_source);
-    } else {
-        canvas.set_pen_input_source(None);
-    }
-
+    canvas.set_pen_input_source(input_source);
     canvas.emit_handle_widget_flags(widget_flags);
     (Inhibit(inhibit), state)
 }
@@ -290,6 +285,7 @@ fn reject_pointer_input(
     input_source_matches: bool,
     touch_drawing: bool,
 ) -> bool {
+    // If pen is already down, reject events from other input sources
     if matches!(state, PenState::Down) && !input_source_matches {
         return true;
     }
